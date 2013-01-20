@@ -106,6 +106,7 @@ def get_local_ip_for(target):
               there is no suitable address (perhaps we don't currently have an
               externally-visible interface), this will return None.
     """
+    #TODO IPv6
 
     try:
         target_ipaddr = socket.gethostbyname(target)
@@ -168,22 +169,80 @@ _platform_map = {
 class UnsupportedPlatformError(Exception):
     pass
 
-# Wow, I'm really amazed at home much mileage we've gotten out of calling
+# ipv6 and v4 REs from http://stackoverflow.com/a/319293
+_ipv6_re = r"""
+        (?!.*::.*::)                # Only a single whildcard allowed
+        (?:(?!:)|:(?=:))            # Colon iff it would be part of a wildcard
+        (?:                         # Repeat 6 times:
+            [0-9a-f]{0,4}           #   A group of at most four hexadecimal digits
+            (?:(?<=::)|(?<!::):)    #   Colon unless preceeded by wildcard
+        ){6}                        #
+        (?:                         # Either
+            [0-9a-f]{0,4}           #   Another group
+            (?:(?<=::)|(?<!::):)    #   Colon unless preceeded by wildcard
+            [0-9a-f]{0,4}           #   Last group
+            (?: (?<=::)             #   Colon iff preceeded by exacly one colon
+             |  (?<!:)              #
+             |  (?<=:) (?<!::) :    #
+             )                      # OR
+         |                          #   A v4 address with NO leading zeros 
+            (?:25[0-4]|2[0-4]\d|1\d\d|[1-9]?\d)
+            (?: \.
+                (?:25[0-4]|2[0-4]\d|1\d\d|[1-9]?\d)
+            ){3}
+        )
+    """
+
+_ipv4_re = r"""
+        (?:
+          # Dotted variants:
+          (?:
+            # Decimal 1-255 (no leading 0's)
+            [3-9]\d?|2(?:5[0-5]|[0-4]?\d)?|1\d{0,2}
+          |
+            0x0*[0-9a-f]{1,2}  # Hexadecimal 0x0 - 0xFF (possible leading 0's)
+          |
+            0+[1-3]?[0-7]{0,2} # Octal 0 - 0377 (possible leading 0's)
+          )
+          (?:                  # Repeat 0-3 times, separated by a dot
+            \.
+            (?:
+              [3-9]\d?|2(?:5[0-5]|[0-4]?\d)?|1\d{0,2}
+            |
+              0x0*[0-9a-f]{1,2}
+            |
+              0+[1-3]?[0-7]{0,2}
+            )
+          ){0,3}
+        |
+          0x0*[0-9a-f]{1,8}    # Hexadecimal notation, 0x0 - 0xffffffff
+        |
+          0+[0-3]?[0-7]{0,10}  # Octal notation, 0 - 037777777777
+        |
+          # Decimal notation, 1-4294967295:
+          429496729[0-5]|42949672[0-8]\d|4294967[01]\d\d|429496[0-6]\d{3}|
+          42949[0-5]\d{4}|4294[0-8]\d{5}|429[0-3]\d{6}|42[0-8]\d{7}|
+          4[01]\d{8}|[1-3]\d{0,9}|[4-9]\d{0,8}
+        )
+    """
+
+# Wow, I'm really amazed at how much mileage we've gotten out of calling
 # the external route.exe program on windows...  It appears to work on all
 # versions so far.  Still, the real system calls would much be preferred...
 # ... thus wrote Greg Smith in time immemorial...
 _win32_path = 'route.exe'
 _win32_args = ('print',)
-_win32_re = re.compile('^\s*\d+\.\d+\.\d+\.\d+\s.+\s(?P<address>\d+\.\d+\.\d+\.\d+)\s+(?P<metric>\d+)\s*$', flags=re.M|re.I|re.S)
+# TODO: IPv6
+_win32_re = re.compile('^\s*' + _ipv4_re  + '\s.+\s(?P<address>' + _ipv4_re + ')\s+(?P<metric>\d+)\s*$', flags=re.M|re.I|re.S|re.X)
 
 # These work in Redhat 6.x and Debian 2.2 potato
 _linux_path = '/sbin/ifconfig'
-_linux_re = re.compile('^\s*inet [a-zA-Z]*:?(?P<address>\d+\.\d+\.\d+\.\d+)\s.+$', flags=re.M|re.I|re.S)
+_linux_args = ()
+_linux_re = re.compile('^\s*inet6?\s+(addr:|addr:)?\s?(?P<address>' + _ipv4_re + '|' + _ipv6_re + ')(/[0-9]{1,3}|\%[a-z]+[0-9]+)?\s.+$', flags=re.M|re.I|re.S|re.X)
 
 # NetBSD 1.4 (submitted by Rhialto), Darwin, Mac OS X
 _netbsd_path = '/sbin/ifconfig'
 _netbsd_args = ('-a',)
-_netbsd_re = re.compile('^\s+inet [a-zA-Z]*:?(?P<address>\d+\.\d+\.\d+\.\d+)\s.+$', flags=re.M|re.I|re.S)
 
 # Irix 6.5
 _irix_path = '/usr/etc/ifconfig'
@@ -195,12 +254,12 @@ _sunos_path = '/usr/sbin/ifconfig'
 # k: platform string as provided in the value of _platform_map
 # v: tuple of (path_to_tool, args, regex,)
 _tool_map = {
-    "linux": (_linux_path, (), _linux_re,),
     "win32": (_win32_path, _win32_args, _win32_re,),
     "cygwin": (_win32_path, _win32_args, _win32_re,),
-    "bsd": (_netbsd_path, _netbsd_args, _netbsd_re,),
-    "irix": (_irix_path, _netbsd_args, _netbsd_re,),
-    "sunos": (_sunos_path, _netbsd_args, _netbsd_re,),
+    "linux": (_linux_path, _linux_args, _linux_re,),
+    "bsd": (_netbsd_path, _netbsd_args, _linux_re,),
+    "irix": (_irix_path, _netbsd_args, _linux_re,),
+    "sunos": (_sunos_path, _netbsd_args, _linux_re,),
     }
 
 def _find_addresses_via_config():
