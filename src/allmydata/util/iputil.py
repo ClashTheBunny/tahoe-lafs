@@ -80,9 +80,9 @@ def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
         reachable to.
     """
     addresses = []
-    local_ip = get_local_ip_for(target)
-    if local_ip:
-        addresses.append(local_ip)
+    local_ips = get_local_ip_for(target)
+    if local_ips:
+        addresses.append(local_ips)
 
     if sys.platform == "cygwin":
         d = _cygwin_hack_find_addresses(target)
@@ -106,10 +106,9 @@ def get_local_ip_for(target):
               there is no suitable address (perhaps we don't currently have an
               externally-visible interface), this will return None.
     """
-    #TODO IPv6
 
     try:
-        target_ipaddr = socket.gethostbyname(target)
+        target_ipaddrs = set([ addr[4][0] for addr in socket.getaddrinfo(target, None) ])
     except socket.gaierror:
         # DNS isn't running, or somehow we encountered an error
 
@@ -123,17 +122,21 @@ def get_local_ip_for(target):
         # to default to the numerical ip address for A.ROOT-SERVERS.NET, to
         # avoid this DNS lookup. This also makes node startup fractionally
         # faster.
-        return None
+        return []
     udpprot = DatagramProtocol()
     port = reactor.listenUDP(0, udpprot)
-    try:
-        udpprot.transport.connect(target_ipaddr, 7)
-        localip = udpprot.transport.getHost().host
-    except socket.error:
-        # no route to that host
-        localip = None
-    port.stopListening() # note, this returns a Deferred
-    return localip
+    localips = []
+    for target_ipaddr in target_ipaddrs:
+        if target_ipaddr in localips: continue
+        try:
+            udpprot.transport.connect(target_ipaddr, 7)
+            localip = udpprot.transport.getHost().host
+        except ValueError, socket.error:
+            # ValueError will fire on IPv6 until http://twistedmatrix.com/trac/ticket/5087 is fixed; no route to that host
+            localip = None
+        if localip is not None: localips.append(localip)
+        port.stopListening() # note, this returns a Deferred
+    return localips
 
 # k: result of sys.platform, v: which kind of IP configuration reader we use
 _platform_map = {
@@ -142,6 +145,7 @@ _platform_map = {
     "linux2": "linux",     # debian
     "linux3": "linux",     # debian
     "win32": "win32",
+    "cygwin": "win32",
     "irix6-n32": "irix",
     "irix6-n64": "irix",
     "irix6": "irix",
@@ -163,7 +167,6 @@ _platform_map = {
     "netbsd5": "bsd",
     "netbsd6": "bsd",
     "sunos5": "sunos",
-    "cygwin": "cygwin",
     }
 
 class UnsupportedPlatformError(Exception):
@@ -171,7 +174,7 @@ class UnsupportedPlatformError(Exception):
 
 # ipv6 and v4 REs from http://stackoverflow.com/a/319293
 _ipv6_re = r"""
-        (?!.*::.*::)                # Only a single whildcard allowed
+        (?!::[0-9a-f:]+::)                # Only a single whildcard allowed
         (?:(?!:)|:(?=:))            # Colon iff it would be part of a wildcard
         (?:                         # Repeat 6 times:
             [0-9a-f]{0,4}           #   A group of at most four hexadecimal digits
@@ -238,7 +241,7 @@ _win32_re = re.compile('^\s*' + _ipv4_re  + '\s.+\s(?P<address>' + _ipv4_re + ')
 # These work in Redhat 6.x and Debian 2.2 potato
 _linux_path = '/sbin/ifconfig'
 _linux_args = ()
-_linux_re = re.compile('^\s*inet6?\s+(addr:|addr:)?\s?(?P<address>' + _ipv4_re + '|' + _ipv6_re + ')(/[0-9]{1,3}|\%[a-z]+[0-9]+)?\s.+$', flags=re.M|re.I|re.S|re.X)
+_linux_re = re.compile('^\s*inet6?\s+(addr:)?\s?(?P<address>' + _ipv4_re + '|' + _ipv6_re + ')(/[0-9]{1,3}|\%[a-z]+[0-9]+)?\s.+$', flags=re.M|re.I|re.S|re.X)
 
 # NetBSD 1.4 (submitted by Rhialto), Darwin, Mac OS X
 _netbsd_path = '/sbin/ifconfig'
@@ -255,7 +258,6 @@ _sunos_path = '/usr/sbin/ifconfig'
 # v: tuple of (path_to_tool, args, regex,)
 _tool_map = {
     "win32": (_win32_path, _win32_args, _win32_re,),
-    "cygwin": (_win32_path, _win32_args, _win32_re,),
     "linux": (_linux_path, _linux_args, _linux_re,),
     "bsd": (_netbsd_path, _netbsd_args, _linux_re,),
     "irix": (_irix_path, _netbsd_args, _linux_re,),
@@ -312,9 +314,10 @@ def _cygwin_hack_find_addresses(target):
     addresses = []
     for h in [target, "localhost", "127.0.0.1",]:
         try:
-            addr = get_local_ip_for(h)
-            if addr not in addresses:
-                addresses.append(addr)
+            addrs = get_local_ip_for(h)
+            for addr in addrs:
+                if addr not in addresses:
+                    addresses.append(addr)
         except socket.gaierror:
             pass
 
