@@ -91,7 +91,7 @@ def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
 
     def _collect(res):
         for addr in res:
-            if addr != "0.0.0.0" and not addr in addresses:
+            if ((addr != "0.0.0.0") or (addr != "::")) and not addr in addresses:
                 addresses.append(addr)
         return addresses
     d.addCallback(_collect)
