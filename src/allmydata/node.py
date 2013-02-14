@@ -189,7 +189,7 @@ class Node(service.MultiService):
         self.write_config("my_nodeid", b32encode(self.nodeid).lower() + "\n")
         self.short_nodeid = b32encode(self.nodeid).lower()[:8] # ready for printing
 
-        tubport = self.get_config("node", "tub.port", "tcp:0")
+        tubport = self.get_config("node", "tub.port", "tcp6:0")
         self.tub.listenOn(tubport)
         # we must wait until our service has started before we can find out
         # our IP address and thus do tub.setLocation, and we can't register
@@ -378,8 +378,12 @@ class Node(service.MultiService):
         # next time
         fileutil.write_atomically(self._portnumfile, "%d\n" % portnum, mode="")
 
-        base_location = ",".join([ "%s:%d" % (addr, portnum)
+        v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
+        v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
+
+        base_location = ",".join([ "ipv6:[%s]:%d" % (addr, portnum) if v6re.match(addr) else "ipv4:%s:%d" % (addr, portnum)
                                    for addr in local_addresses ])
+
         location = self.get_config("node", "tub.location", base_location)
         self.log("Tub location set to %s" % location)
         self.tub.setLocation(location)
