@@ -82,7 +82,7 @@ def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
     addresses = []
     local_ips = get_local_ip_for(target)
     if local_ips:
-        addresses.append(local_ips)
+        addresses.extend(local_ips)
 
     if sys.platform == "cygwin":
         d = _cygwin_hack_find_addresses(target)
@@ -305,7 +305,7 @@ def _query(path, args, regex):
         m = regex.match(outline)
         if m:
             addr = m.groupdict()['address']
-            if addr not in addresses:
+            if addr not in addresses and addr is not None:
                 addresses.append(addr)
 
     return addresses
