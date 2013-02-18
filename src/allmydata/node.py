@@ -381,8 +381,16 @@ class Node(service.MultiService):
         v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
         v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
 
-        base_location = ",".join([ "ipv6:[%s]:%d" % (addr, portnum) if v6re.match(addr) else "ipv4:%s:%d" % (addr, portnum)
-                                   for addr in local_addresses ])
+        ipv6_base_location = [ "ipv6:[%s]:%d" % (addr, portnum)
+                                   for addr in local_addresses if v6re.match(addr)]
+
+        ipv4_base_location = [ "ipv4:%s:%d" % (addr, portnum)
+                                   for addr in local_addresses if v4re.match(addr) ]
+
+        ipv4_base_location_old_format = [ "%s:%d" % (addr, portnum)
+                                   for addr in local_addresses if v4re.match(addr) ]
+
+        base_location = ','.join(ipv4_base_location + ipv4_base_location_old_format + ipv6_base_location )
 
         location = self.get_config("node", "tub.location", base_location)
         self.log("Tub location set to %s" % location)
