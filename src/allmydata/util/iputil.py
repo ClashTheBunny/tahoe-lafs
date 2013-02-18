@@ -228,6 +228,7 @@ _ipv4_re = r"""
           4[01]\d{8}|[1-3]\d{0,9}|[4-9]\d{0,8}
         )
     """
+_ipv6_link_local_re = re.compile('^fe[89AB]', flags=re.M|re.I|re.S|re.X)
 
 # Wow, I'm really amazed at how much mileage we've gotten out of calling
 # the external route.exe program on windows...  It appears to work on all
@@ -305,7 +306,7 @@ def _query(path, args, regex):
         m = regex.match(outline)
         if m:
             addr = m.groupdict()['address']
-            if addr not in addresses and addr is not None:
+            if addr not in addresses and addr is not None and not _ipv6_link_local_re.match(addr):
                 addresses.append(addr)
 
     return addresses
