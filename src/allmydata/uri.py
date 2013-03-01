@@ -30,9 +30,12 @@ NUMBER='([0-9]+)'
 NUMBER_IGNORE='(?:[0-9]+)'
 
 # "human-encoded" URIs are allowed to come with a leading
-# 'http://127.0.0.1:(8123|3456)/uri/' that will be ignored.
+# 'http://127.0.0.1:(8123|3456)/uri/' or 'http://[::1]:(8123|3456)/uri/'
+# that will be ignored.
 # Note that nothing in the Tahoe code currently uses the human encoding.
-OPTIONALHTTPLEAD=r'(?:https?://(?:[^:/]+)(?::%s)?/uri/)?' % NUMBER_IGNORE
+OPTIONAL_IPV4_HTTPLEAD=r'(?:https?://(?:[^:/]+)(?::%s)?/uri/)?' % NUMBER_IGNORE
+OPTIONAL_IPV6_HTTPLEAD=r'(?:https?://(?:\[[0-9a-fA-F:]+\])(?::%s)?/uri/)?' % NUMBER_IGNORE
+OPTIONALHTTPLEAD=r'(' + OPTIONAL_IPV4_HTTPLEAD + '|' + OPTIONAL_IPV6_HTTPLEAD + ')?'
 
 
 class _BaseURI:
