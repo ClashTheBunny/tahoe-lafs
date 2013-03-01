@@ -3,7 +3,7 @@ from base64 import b32decode, b32encode
 
 from twisted.python import log as twlog
 from twisted.application import service
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, address
 from foolscap.api import Tub, eventually, app_versions
 import foolscap.logging.log
 from allmydata import get_package_versions, get_package_versions_string
@@ -374,9 +374,13 @@ class Node(service.MultiService):
         # running, which means after startService.
         l = self.tub.getListeners()[0]
         portnum = l.getPortnum()
+        # portnum is an integer, which is the default way of saying IPv4 only port.  To get IPv6, add tcp6: to the portnum
+        portAdd = ''
+        if isinstance(l.s._port.getHost(), address.IPv6Address):
+            portAdd='tcp6:'
         # record which port we're listening on, so we can grab the same one
         # next time
-        fileutil.write_atomically(self._portnumfile, "%d\n" % portnum, mode="")
+        fileutil.write_atomically(self._portnumfile, "%s%d\n" % (portAdd, portnum), mode="")
 
         v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
         v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
