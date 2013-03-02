@@ -381,15 +381,36 @@ class Node(service.MultiService):
         l = self.tub.getListeners()[0]
         portnum = l.getPortnum()
         # portnum is an integer, which is the default way of saying IPv4 only port.  To get IPv6, add tcp6: to the portnum
-        portAdd = ''
+        addrType = ''
         if isinstance(l.s._port.getHost(), address.IPv6Address):
-            portAdd='tcp6:'
+            addrType='tcp6:'
+        elif isinstance(l.s._port.getHost(), address.IPv4Address):
+            addrType='tcp:'
         # record which port we're listening on, so we can grab the same one
         # next time
-        fileutil.write_atomically(self._portnumfile, "%s%d\n" % (portAdd, portnum), mode="")
+        fileutil.write_atomically(self._portnumfile, "%s%d\n" % (addrType, portnum), mode="")
 
+        hideMACaddresses = self.get_config("node", "ipv6privacy", False, boolean=True)
+
+        macre = re.compile('^' + iputil._mac_re + '$', flags=re.M|re.I|re.S|re.X)
         v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
         v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
+
+        macAddresses = []
+        for macaddr in local_addresses:
+            if macre.match(macaddr):
+                local_addresses = [addr for addr in local_addresses if addr != macaddr ]
+                macAddresses.append(macaddr)
+        if hideMACaddresses:
+            for macaddr in macAddresses:
+                newFirstBytebin = int(macaddr[:2],16) ^ 2
+                newFirstByte = '(%0.2X|%X)' % (newFirstBytebin, newFirstBytebin)
+                newmacre = '.*' + newFirstByte + macaddr[3:5] + ':' + macaddr[6:8]
+                newmacre += 'ff:fe' + macaddr[9:11] + ':' + macaddr[12:14] + macaddr[15:] + '$'
+                ipv6basedonmacre = re.compile( newmacre , flags=re.M|re.I|re.S|re.X)
+                for ipaddr in local_addresses:
+                    if ipv6basedonmacre.match(ipaddr):
+                        local_addresses.remove(ipaddr)
 
         ipv6_base_location = [ "ipv6:[%s]:%d" % (addr, portnum)
                                    for addr in local_addresses if v6re.match(addr)]

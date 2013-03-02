@@ -229,6 +229,7 @@ _ipv4_re = r"""
         )
     """
 _ipv6_link_local_re = re.compile('^fe[89AB]', flags=re.M|re.I|re.S|re.X)
+_mac_re = r'([0-9a-f]{2}[:-]){5}[0-9a-f]{2}'
 
 # Wow, I'm really amazed at how much mileage we've gotten out of calling
 # the external route.exe program on windows...  It appears to work on all
@@ -238,15 +239,19 @@ _win32_path = 'route.exe'
 _win32_args = ('print',)
 # TODO: IPv6
 _win32_re = re.compile('^\s*' + _ipv4_re  + '\s.+\s(?P<address>' + _ipv4_re + ')\s+(?P<metric>\d+)\s*$', flags=re.M|re.I|re.S|re.X)
+# TODO: MAC Address RE
+_win32_re_mac = re.compile('^\s*ether\s(?P<macAddress>' + _mac_re + ').*$', flags=re.M|re.I|re.S|re.X)
 
 # These work in Redhat 6.x and Debian 2.2 potato
 _linux_path = '/sbin/ifconfig'
 _linux_args = ()
 _linux_re = re.compile('^\s*inet6?\s+(addr:)?\s?(?P<address>' + _ipv4_re + '|' + _ipv6_re + ')(/[0-9]{1,3}|\%[a-z]+[0-9]+)?\s.+$', flags=re.M|re.I|re.S|re.X)
+_linux_re_mac = re.compile('^.*HWaddr\s(?P<macAddress>' + _mac_re + ')\s*$', flags=re.M|re.I|re.S|re.X)
 
 # NetBSD 1.4 (submitted by Rhialto), Darwin, Mac OS X
 _netbsd_path = '/sbin/ifconfig'
 _netbsd_args = ('-a',)
+_netbsd_re_mac = re.compile('^\s+ether\s+(?P<macAddress>' + _mac_re + ')\s*$', flags=re.M|re.I|re.S|re.X)
 
 # Irix 6.5
 _irix_path = '/usr/etc/ifconfig'
@@ -258,11 +263,11 @@ _sunos_path = '/usr/sbin/ifconfig'
 # k: platform string as provided in the value of _platform_map
 # v: tuple of (path_to_tool, args, regex,)
 _tool_map = {
-    "win32": (_win32_path, _win32_args, _win32_re,),
-    "linux": (_linux_path, _linux_args, _linux_re,),
-    "bsd": (_netbsd_path, _netbsd_args, _linux_re,),
-    "irix": (_irix_path, _netbsd_args, _linux_re,),
-    "sunos": (_sunos_path, _netbsd_args, _linux_re,),
+    "win32": (_win32_path, _win32_args, _win32_re, _win32_re_mac),
+    "linux": (_linux_path, _linux_args, _linux_re, _linux_re_mac),
+    "bsd": (_netbsd_path, _netbsd_args, _linux_re, _netbsd_re_mac),
+    "irix": (_irix_path, _netbsd_args, _linux_re, _netbsd_re_mac),
+    "sunos": (_sunos_path, _netbsd_args, _linux_re, _netbsd_re_mac),
     }
 
 def _find_addresses_via_config():
@@ -275,7 +280,7 @@ def _synchronously_find_addresses_via_config():
     if not platform:
         raise UnsupportedPlatformError(sys.platform)
 
-    (pathtotool, args, regex,) = _tool_map[platform]
+    (pathtotool, args, regex, regex_mac, ) = _tool_map[platform]
 
     # If pathtotool is a fully qualified path then we just try that.
     # If it is merely an executable name then we use Twisted's
@@ -283,24 +288,25 @@ def _synchronously_find_addresses_via_config():
     # gives us something that resembles a dotted-quad IPv4 address.
 
     if os.path.isabs(pathtotool):
-        return _query(pathtotool, args, regex)
+        return _query(pathtotool, args, regex, regex_mac)
     else:
         exes_to_try = which(pathtotool)
         for exe in exes_to_try:
             try:
-                addresses = _query(exe, args, regex)
+                addresses = _query(exe, args, regex, regex_mac)
             except Exception:
                 addresses = []
             if addresses:
                 return addresses
         return []
 
-def _query(path, args, regex):
+def _query(path, args, regex, regex_mac):
     env = {'LANG': 'en_US.UTF-8'}
     p = subprocess.Popen([path] + list(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     (output, err) = p.communicate()
 
     addresses = []
+    macAddresses = []
     outputsplit = output.split('\n')
     for outline in outputsplit:
         m = regex.match(outline)
@@ -308,8 +314,13 @@ def _query(path, args, regex):
             addr = m.groupdict()['address']
             if addr not in addresses and addr is not None and not _ipv6_link_local_re.match(addr):
                 addresses.append(addr)
+        m = regex_mac.match(outline)
+        if m:
+            macAddress = m.groupdict()['macAddress']
+            if macAddress not in macAddresses and macAddress is not None:
+                macAddresses.append(macAddress)
 
-    return addresses
+    return addresses + macAddresses
 
 def _cygwin_hack_find_addresses(target):
     addresses = []
