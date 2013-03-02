@@ -189,7 +189,7 @@ class Node(service.MultiService):
         self.write_config("my_nodeid", b32encode(self.nodeid).lower() + "\n")
         self.short_nodeid = b32encode(self.nodeid).lower()[:8] # ready for printing
 
-        preferIPv4 = self.get_config("node", "preferipv4", False)
+        preferIPv4 = self.get_config("node", "preferipv4", False, boolean=True)
 
         if preferIPv4:
             tubport = self.get_config("node", "tub.port", "tcp:0")
