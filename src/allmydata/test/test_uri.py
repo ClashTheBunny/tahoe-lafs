@@ -39,7 +39,11 @@ class Literal(testutil.ReallyEqualMixin, unittest.TestCase):
         self.failUnlessIdentical(u, u3)
         self.failUnlessReallyEqual(u.get_verify_cap(), None)
 
-        he = u.to_human_encoding()
+        he = u.to_human_encoding_ipv4()
+        u_h = uri.LiteralFileURI.init_from_human_encoding(he)
+        self.failUnlessReallyEqual(u, u_h)
+
+        he = u.to_human_encoding_ipv6()
         u_h = uri.LiteralFileURI.init_from_human_encoding(he)
         self.failUnlessReallyEqual(u, u_h)
 
@@ -119,8 +123,12 @@ class CHKFile(testutil.ReallyEqualMixin, unittest.TestCase):
 
         u_ro = u.get_readonly()
         self.failUnlessIdentical(u, u_ro)
-        he = u.to_human_encoding()
+        he = u.to_human_encoding_ipv4()
         self.failUnlessReallyEqual(he, "http://127.0.0.1:3456/uri/" + u.to_string())
+        self.failUnlessReallyEqual(uri.CHKFileURI.init_from_human_encoding(he), u)
+
+        he = u.to_human_encoding_ipv6()
+        self.failUnlessReallyEqual(he, "http://[::1]:3456/uri/" + u.to_string())
         self.failUnlessReallyEqual(uri.CHKFileURI.init_from_human_encoding(he), u)
 
         u2 = uri.from_string(u.to_string())
@@ -151,7 +159,11 @@ class CHKFile(testutil.ReallyEqualMixin, unittest.TestCase):
 
         v2 = uri.from_string(v.to_string())
         self.failUnlessReallyEqual(v, v2)
-        he = v.to_human_encoding()
+        he = v.to_human_encoding_ipv4()
+        v2_h = uri.CHKFileVerifierURI.init_from_human_encoding(he)
+        self.failUnlessReallyEqual(v2, v2_h)
+
+        he = v.to_human_encoding_ipv6()
         v2_h = uri.CHKFileVerifierURI.init_from_human_encoding(he)
         self.failUnlessReallyEqual(v2, v2_h)
 
@@ -273,7 +285,11 @@ class Mutable(testutil.ReallyEqualMixin, unittest.TestCase):
         self.failIf(IDirnodeURI.providedBy(u))
         self.failUnless("WriteableSSKFileURI" in str(u))
 
-        he = u.to_human_encoding()
+        he = u.to_human_encoding_ipv4()
+        u_h = uri.WriteableSSKFileURI.init_from_human_encoding(he)
+        self.failUnlessReallyEqual(u, u_h)
+
+        he = u.to_human_encoding_ipv6()
         u_h = uri.WriteableSSKFileURI.init_from_human_encoding(he)
         self.failUnlessReallyEqual(u, u_h)
 
@@ -310,7 +326,11 @@ class Mutable(testutil.ReallyEqualMixin, unittest.TestCase):
         u3imm = uri.from_string(uri.ALLEGED_IMMUTABLE_PREFIX + u3.to_string())
         self.failUnless(isinstance(u3imm, uri.UnknownURI), u3imm)
 
-        he = u3.to_human_encoding()
+        he = u3.to_human_encoding_ipv4()
+        u3_h = uri.ReadonlySSKFileURI.init_from_human_encoding(he)
+        self.failUnlessReallyEqual(u3, u3_h)
+
+        he = u3.to_human_encoding_ipv6()
         u3_h = uri.ReadonlySSKFileURI.init_from_human_encoding(he)
         self.failUnlessReallyEqual(u3, u3_h)
 
@@ -342,7 +362,11 @@ class Mutable(testutil.ReallyEqualMixin, unittest.TestCase):
         self.failUnless(IVerifierURI.providedBy(u7))
         self.failUnlessReallyEqual(u7.get_storage_index(), u.get_storage_index())
 
-        he = u5.to_human_encoding()
+        he = u5.to_human_encoding_ipv4()
+        u5_h = uri.SSKVerifierURI.init_from_human_encoding(he)
+        self.failUnlessReallyEqual(u5, u5_h)
+
+        he = u5.to_human_encoding_ipv6()
         u5_h = uri.SSKVerifierURI.init_from_human_encoding(he)
         self.failUnlessReallyEqual(u5, u5_h)
 
