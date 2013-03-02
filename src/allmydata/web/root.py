@@ -252,7 +252,9 @@ class Root(rend.Page):
             if nodeid == self.client.nodeid:
                 rhost_s = "(loopback)"
             elif isinstance(rhost, address.IPv4Address):
-                rhost_s = "%s:%d" % (rhost.host, rhost.port)
+                rhost_s = "ipv4:%s:%d" % (rhost.host, rhost.port)
+            elif isinstance(rhost, address.IPv6Address):
+                rhost_s = "ipv6:[%s]:%d" % (rhost.host, rhost.port)
             else:
                 rhost_s = str(rhost)
             connected = "Yes: to " + rhost_s

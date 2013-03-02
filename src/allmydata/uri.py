@@ -33,10 +33,7 @@ NUMBER_IGNORE='(?:[0-9]+)'
 # 'http://127.0.0.1:(8123|3456)/uri/' or 'http://[::1]:(8123|3456)/uri/'
 # that will be ignored.
 # Note that nothing in the Tahoe code currently uses the human encoding.
-OPTIONAL_IPV4_HTTPLEAD=r'(?:https?://(?:[^:/]+)(?::%s)?/uri/)?' % NUMBER_IGNORE
-OPTIONAL_IPV6_HTTPLEAD=r'(?:https?://(?:\[[0-9a-fA-F:]+\])(?::%s)?/uri/)?' % NUMBER_IGNORE
-OPTIONALHTTPLEAD=r'(' + OPTIONAL_IPV4_HTTPLEAD + '|' + OPTIONAL_IPV6_HTTPLEAD + ')?'
-
+OPTIONALHTTPLEAD=r'(?:https?://(?:[^:/]+|\[[0-9a-fA-F:]+\])(?::%s)?/uri/)?' % NUMBER_IGNORE
 
 class _BaseURI:
     def __hash__(self):
@@ -54,8 +51,11 @@ class _BaseURI:
         else:
             return True
 
-    def to_human_encoding(self):
+    def to_human_encoding_ipv4(self):
         return 'http://127.0.0.1:3456/uri/'+self.to_string()
+
+    def to_human_encoding_ipv6(self):
+        return 'http://[::1]:3456/uri/'+self.to_string()
 
     def get_storage_index(self):
         return self.storage_index

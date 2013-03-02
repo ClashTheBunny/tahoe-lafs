@@ -189,7 +189,13 @@ class Node(service.MultiService):
         self.write_config("my_nodeid", b32encode(self.nodeid).lower() + "\n")
         self.short_nodeid = b32encode(self.nodeid).lower()[:8] # ready for printing
 
-        tubport = self.get_config("node", "tub.port", "tcp6:0")
+        preferIPv4 = self.get_config("node", "preferipv4", False)
+
+        if preferIPv4:
+            tubport = self.get_config("node", "tub.port", "tcp:0")
+        else:
+            tubport = self.get_config("node", "tub.port", "tcp6:0")
+
         self.tub.listenOn(tubport)
         # we must wait until our service has started before we can find out
         # our IP address and thus do tub.setLocation, and we can't register
@@ -394,7 +400,12 @@ class Node(service.MultiService):
         ipv4_base_location_old_format = [ "%s:%d" % (addr, portnum)
                                    for addr in local_addresses if v4re.match(addr) ]
 
-        base_location = ','.join(ipv4_base_location + ipv4_base_location_old_format + ipv6_base_location )
+        preferIPv4 = self.get_config("node", "preferipv4", False)
+
+        if preferIPv4:
+            base_location = ','.join(ipv6_base_location + ipv4_base_location + ipv4_base_location_old_format )
+        else:
+            base_location = ','.join(ipv4_base_location + ipv4_base_location_old_format + ipv6_base_location )
 
         location = self.get_config("node", "tub.location", base_location)
         self.log("Tub location set to %s" % location)
