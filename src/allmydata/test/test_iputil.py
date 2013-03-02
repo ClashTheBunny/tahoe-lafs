@@ -66,6 +66,8 @@ eth1      Link encap:Ethernet  HWaddr 00:22:33:44:55:66
      '2001:999:1235:999::1',
      '2001:999:1234:999::2',
      'fe80::222:33ff:fe44:5566',
+     '00:22:33:44:55:66',
+     '00:11:22:33:44:55',
      #TODO: we want to be able to force use of this address if it exists.  Privacy and all...
      '2001:888:1234:111:f0cf:9396:cf9a:dd42',     # IPv6 Privacy Address, random except for network 
      '2001:888:1235:111:211:22ff:fe33:4455',      # Autoconfigured Address, based on network + HWaddr
@@ -103,6 +105,7 @@ tun0: flags=8851<UP,POINTOPOINT,RUNNING,SIMPLEX,MULTICAST> mtu 1500
      'fe80::211:22ff:fe33:4455',    # Link-local Address, based on 'fe80::' + HWaddr
      '192.168.1.2',
      '2001:888:1235:222::1',        # This is my private /64
+     '00:11:22:33:44:55',
      '2001:888:1234:222::2',        # This is my tunnel's address on the local side
      '192.168.10.1']),),
         'win32': ("""
@@ -176,8 +179,10 @@ class ListAddresses(testutil.SignalMixin, unittest.TestCase):
         for platform in tool_output_map.keys():
             matchSet = set([iputil._tool_map[platform][2].match(outline).groupdict()['address']
                 for outline in tool_output_map[platform][0].split('\n')
-                if iputil._tool_map[platform][2].match(outline)])
-            matchSet = set([iputil._tool_map[platform][2].match(foo).groupdict()['address'] for foo in tool_output_map[platform][0].split('\n') if iputil._tool_map[platform][2].match(foo)])
+                if iputil._tool_map[platform][2].match(outline)] + 
+            [iputil._tool_map[platform][3].match(outline).groupdict()['macAddress']
+                for outline in tool_output_map[platform][0].split('\n')
+                if iputil._tool_map[platform][3].match(outline)])
             trueSet = tool_output_map[platform][1]
             symSet = matchSet.symmetric_difference(trueSet)
             self.assertTrue(len(symSet) == 0, "Your test for " + platform + " failed, this set should be empty: " + str(symSet))
