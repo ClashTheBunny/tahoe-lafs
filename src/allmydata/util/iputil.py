@@ -229,7 +229,7 @@ _ipv4_re = r"""
         )
     """
 _ipv6_link_local_re = re.compile('^fe[89AB]', flags=re.M|re.I|re.S|re.X)
-_mac_re = r'([0-9a-f]{2}[:-]){5}[0-9a-f]{2}'
+_mac_re = r'([0-9a-f]{2}[-: ]){5}[0-9a-f]{2}'
 
 # Wow, I'm really amazed at how much mileage we've gotten out of calling
 # the external route.exe program on windows...  It appears to work on all
@@ -238,9 +238,9 @@ _mac_re = r'([0-9a-f]{2}[:-]){5}[0-9a-f]{2}'
 _win32_path = 'route.exe'
 _win32_args = ('print',)
 # TODO: IPv6
-_win32_re = re.compile('^\s*' + _ipv4_re  + '\s.+\s(?P<address>' + _ipv4_re + ')\s+(?P<metric>\d+)\s*$', flags=re.M|re.I|re.S|re.X)
+_win32_re = re.compile('^(?:\s*' + _ipv4_re  + '\s.+\s|\s+[0-9]+\s+[0-9]+\s+)(?P<address>' + _ipv4_re + '|' + _ipv6_re + ')(?:\s+(?P<metric>\d+)\s*|/128.*)$', flags=re.M|re.I|re.S|re.X)
 # TODO: MAC Address RE
-_win32_re_mac = re.compile('^\s*ether\s(?P<macAddress>' + _mac_re + ').*$', flags=re.M|re.I|re.S|re.X)
+_win32_re_mac = re.compile('^\s+[0-9]+...(?P<macAddress>' + _mac_re + ')\s\.+.*$', flags=re.M|re.I|re.S|re.X)
 
 # These work in Redhat 6.x and Debian 2.2 potato
 _linux_path = '/sbin/ifconfig'
@@ -317,6 +317,7 @@ def _query(path, args, regex, regex_mac):
         m = regex_mac.match(outline)
         if m:
             macAddress = m.groupdict()['macAddress']
+            macAddress = re.sub('[ -]',':',macAddress)
             if macAddress not in macAddresses and macAddress is not None:
                 macAddresses.append(macAddress)
 
