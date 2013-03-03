@@ -189,9 +189,9 @@ class Node(service.MultiService):
         self.write_config("my_nodeid", b32encode(self.nodeid).lower() + "\n")
         self.short_nodeid = b32encode(self.nodeid).lower()[:8] # ready for printing
 
-        preferIPv4 = self.get_config("node", "preferipv4", False, boolean=True)
+        ipversion = self.get_config("node", "ipversion", "preferv6")
 
-        if preferIPv4:
+        if ipversion == "v4":
             tubport = self.get_config("node", "tub.port", "tcp:0")
         else:
             tubport = self.get_config("node", "tub.port", "tcp6:0")
@@ -421,11 +421,13 @@ class Node(service.MultiService):
         ipv4_base_location_old_format = [ "%s:%d" % (addr, portnum)
                                    for addr in local_addresses if v4re.match(addr) ]
 
-        preferIPv4 = self.get_config("node", "preferipv4", False)
+        ipversion = self.get_config("node", "ipversion", "preferv6")
 
-        if preferIPv4:
+        if ipversion == 'v4':
+            base_location = ','.join( ipv4_base_location + ipv4_base_location_old_format )
+        elif ipversion == 'preferv4':
             base_location = ','.join(ipv6_base_location + ipv4_base_location + ipv4_base_location_old_format )
-        else:
+        elif ipversion == 'preferv6':
             base_location = ','.join(ipv4_base_location + ipv4_base_location_old_format + ipv6_base_location )
 
         location = self.get_config("node", "tub.location", base_location)
