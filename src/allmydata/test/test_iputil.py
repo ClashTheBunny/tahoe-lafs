@@ -68,7 +68,6 @@ eth1      Link encap:Ethernet  HWaddr 00:22:33:44:55:66
      'fe80::222:33ff:fe44:5566',
      '00:22:33:44:55:66',
      '00:11:22:33:44:55',
-     #TODO: we want to be able to force use of this address if it exists.  Privacy and all...
      '2001:888:1234:111:f0cf:9396:cf9a:dd42',     # IPv6 Privacy Address, random except for network 
      '2001:888:1235:111:211:22ff:fe33:4455',      # Autoconfigured Address, based on network + HWaddr
      'fe80::211:22ff:fe33:4455'])),               # Link-local Address, based on 'fe80::' + HWaddr
@@ -159,6 +158,11 @@ Persistent Routes:
   None
 """,
     set(['127.0.0.1',
+        'fe80::14d7:3137:a803:5c0e',
+        '2001:0:5ef5:79fd:14d7:3137:1234:5678',
+        'fe80::406d:150d:6f2c:8f8b',
+        '::1',
+        '00 11 22 33 44 55',
         '192.168.222.110'] ),),
 }
 
