@@ -3,7 +3,7 @@ from base64 import b32decode, b32encode
 
 from twisted.python import log as twlog
 from twisted.application import service
-from twisted.internet import defer, reactor, address
+from twisted.internet import defer, reactor, address, error
 from foolscap.api import Tub, eventually, app_versions
 import foolscap.logging.log
 from allmydata import get_package_versions, get_package_versions_string
@@ -189,14 +189,32 @@ class Node(service.MultiService):
         self.write_config("my_nodeid", b32encode(self.nodeid).lower() + "\n")
         self.short_nodeid = b32encode(self.nodeid).lower()[:8] # ready for printing
 
-        ipversion = self.get_config("node", "ipversion", "preferv6")
+        incomingFamily = self.get_config("node", "incomingfamily", "both")
 
-        if ipversion == "v4":
-            tubport = self.get_config("node", "tub.port", "tcp:0")
+        if incomingFamily == "inet":
+            tubport_config = self.get_config("node", "tub.port", "tcp4:0")
+            try:
+                int(tubport_config)
+                tubport = "tcp4:%s:interface=0.0.0.0" % tubport_config
+            except:
+                tubport = "%s:interface=0.0.0.0" % tubport_config
+            self.tub.listenOn(tubport)
+        elif incomingFamily == "inet6" or incomingFamily == "both":
+            # If both, we listen first on IPv6, and later will try listening
+            # on IPv4 when this is up. This way we can surely listen on both
+            # v6 and v4.
+            tubport_config = self.get_config("node", "tub.port", "tcp6:0")
+            try:
+                int(tubport_config)
+                tubport = "tcp6:%s:interface=[::]" % tubport_config
+            except:
+                tubport = "%s:interface=[::]" % tubport_config
+            self.tub.listenOn(tubport)
         else:
+            # TODO: I think this may want to raise an error, this means that something other than inet, inet6, or both is configured..
             tubport = self.get_config("node", "tub.port", "tcp6:0")
+            self.tub.listenOn(tubport)
 
-        self.tub.listenOn(tubport)
         # we must wait until our service has started before we can find out
         # our IP address and thus do tub.setLocation, and we can't register
         # any services with the Tub until after that point
@@ -385,7 +403,20 @@ class Node(service.MultiService):
         if isinstance(l.s._port.getHost(), address.IPv6Address):
             addrType='tcp6:'
         elif isinstance(l.s._port.getHost(), address.IPv4Address):
-            addrType='tcp:'
+            addrType='tcp4:'
+        incomingFamily = self.get_config("node", "incomingfamily", "both")
+        # now that we have our listener up and running, we can try starting another on IPv4.
+        # If this succeeds, then we don't have dualstack and now have two listeners, if this
+        # fails, we have dualstack!
+        if incomingFamily == "both":
+            try:
+                tubport = "tcp4:" + str(portnum) + ":interface=0.0.0.0"
+                self.tub.listenOn(tubport)
+            except error.CannotListenError as e:
+                if e.socketError.errno == 98:
+                    print "Already listening on port %d.  This means that you have dualstack!" % e.port
+                else:
+                    raise
         # record which port we're listening on, so we can grab the same one
         # next time
         fileutil.write_atomically(self._portnumfile, "%s%d\n" % (addrType, portnum), mode="")
@@ -396,11 +427,9 @@ class Node(service.MultiService):
         v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
         v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
 
-        macAddresses = []
-        for macaddr in local_addresses:
-            if macre.match(macaddr):
-                local_addresses = [addr for addr in local_addresses if addr != macaddr ]
-                macAddresses.append(macaddr)
+        macAddresses = [ addr for addr in local_addresses if macre.match(addr)]
+        local_addresses = [addr for addr in local_addresses if addr not in macAddresses ]
+
         if hideMACaddresses:
             for macaddr in macAddresses:
                 newFirstBytebin = int(macaddr[:2],16) ^ 2
@@ -408,9 +437,7 @@ class Node(service.MultiService):
                 newmacre = '.*' + newFirstByte + macaddr[3:5] + ':' + macaddr[6:8]
                 newmacre += 'ff:fe' + macaddr[9:11] + ':' + macaddr[12:14] + macaddr[15:] + '$'
                 ipv6basedonmacre = re.compile( newmacre , flags=re.M|re.I|re.S|re.X)
-                for ipaddr in local_addresses:
-                    if ipv6basedonmacre.match(ipaddr):
-                        local_addresses.remove(ipaddr)
+                local_addresses = [addr for addr in local_addresses if not ipv6basedonmacre.match(addr) ]
 
         ipv6_base_location = [ "ipv6:[%s]:%d" % (addr, portnum)
                                    for addr in local_addresses if v6re.match(addr)]
@@ -421,13 +448,14 @@ class Node(service.MultiService):
         ipv4_base_location_old_format = [ "%s:%d" % (addr, portnum)
                                    for addr in local_addresses if v4re.match(addr) ]
 
-        ipversion = self.get_config("node", "ipversion", "preferv6")
-
-        if ipversion == 'v4':
+        outgoingFamily = self.get_config("node", "ipversion", "preferv6")
+        if incomingFamily == 'inet':
             base_location = ','.join( ipv4_base_location + ipv4_base_location_old_format )
-        elif ipversion == 'preferv4':
+        elif incomingFamily == 'inet6':
+            base_location = ','.join( ipv6_base_location )
+        elif outgoingFamily == 'preferv4':
             base_location = ','.join(ipv6_base_location + ipv4_base_location + ipv4_base_location_old_format )
-        elif ipversion == 'preferv6':
+        elif outgoingFamily == 'preferv6':
             base_location = ','.join(ipv4_base_location + ipv4_base_location_old_format + ipv6_base_location )
 
         location = self.get_config("node", "tub.location", base_location)
