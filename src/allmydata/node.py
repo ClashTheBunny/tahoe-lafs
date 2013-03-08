@@ -404,6 +404,10 @@ class Node(service.MultiService):
             addrType='tcp6:'
         elif isinstance(l.s._port.getHost(), address.IPv4Address):
             addrType='tcp4:'
+        # record which port we're listening on, so we can grab the same one
+        # next time
+        fileutil.write_atomically(self._portnumfile, "%s%d\n" % (addrType, portnum), mode="")
+
         incomingFamily = self.get_config("node", "incomingfamily", "both")
         # now that we have our listener up and running, we can try starting another on IPv4.
         # If this succeeds, then we don't have dualstack and now have two listeners, if this
@@ -414,21 +418,23 @@ class Node(service.MultiService):
                 self.tub.listenOn(tubport)
             except error.CannotListenError as e:
                 if e.socketError.errno == 98:
-                    print "Already listening on port %d.  This means that you have dualstack!" % e.port
+                    self.log( "Already listening on port %d.  This means that you have dualstack!" % e.port )
                 else:
                     raise
-        # record which port we're listening on, so we can grab the same one
-        # next time
-        fileutil.write_atomically(self._portnumfile, "%s%d\n" % (addrType, portnum), mode="")
 
         hideMACaddresses = self.get_config("node", "ipv6privacy", False, boolean=True)
+        useLinkLocaladdresses = self.get_config("node", "ipv6linklocal", False, boolean=True)
 
         macre = re.compile('^' + iputil._mac_re + '$', flags=re.M|re.I|re.S|re.X)
         v6re = re.compile('^' + iputil._ipv6_re + '$', flags=re.M|re.I|re.S|re.X)
         v4re = re.compile('^' + iputil._ipv4_re + '$', flags=re.M|re.I|re.S|re.X)
 
         macAddresses = [ addr for addr in local_addresses if macre.match(addr)]
+        linkLocalAddresses = [ addr for addr in local_addresses if iputil._ipv6_link_local_re.match(addr)]
         local_addresses = [addr for addr in local_addresses if addr not in macAddresses ]
+
+        if not useLinkLocaladdresses:
+            local_addresses = [addr for addr in local_addresses if addr not in linkLocalAddresses ]
 
         if hideMACaddresses:
             for macaddr in macAddresses:
