@@ -312,7 +312,7 @@ def _query(path, args, regex, regex_mac):
         m = regex.match(outline)
         if m:
             addr = m.groupdict()['address']
-            if addr not in addresses and addr is not None and not _ipv6_link_local_re.match(addr):
+            if addr not in addresses:
                 addresses.append(addr)
         m = regex_mac.match(outline)
         if m:
