@@ -277,7 +277,7 @@ class Run(unittest.TestCase, testutil.StallMixin):
     def test_loadable(self):
         basedir = "test_client.Run.test_loadable"
         os.mkdir(basedir)
-        dummy = "pb://wl74cyahejagspqgy4x5ukrvfnevlknt@127.0.0.1:58889/bogus"
+        dummy = "pb://wl74cyahejagspqgy4x5ukrvfnevlknt@127.0.0.1:58889,ipv6:[::1]:58889/bogus"
         fileutil.write(os.path.join(basedir, "tahoe.cfg"), BASECONFIG_I % dummy)
         fileutil.write(os.path.join(basedir, "suicide_prevention_hotline"), "")
         client.Client(basedir)
@@ -285,7 +285,7 @@ class Run(unittest.TestCase, testutil.StallMixin):
     def test_reloadable(self):
         basedir = "test_client.Run.test_reloadable"
         os.mkdir(basedir)
-        dummy = "pb://wl74cyahejagspqgy4x5ukrvfnevlknt@127.0.0.1:58889/bogus"
+        dummy = "pb://wl74cyahejagspqgy4x5ukrvfnevlknt@127.0.0.1:58889,ipv6:[::1]:58889/bogus"
         fileutil.write(os.path.join(basedir, "tahoe.cfg"), BASECONFIG_I % dummy)
         c1 = client.Client(basedir)
         c1.setServiceParent(self.sparent)

@@ -65,8 +65,8 @@ class Introducer(ServiceMixin, unittest.TestCase, pollmixin.PollMixin):
         i = IntroducerService()
         self.failUnlessEqual(len(i.get_announcements()), 0)
         self.failUnlessEqual(len(i.get_subscribers()), 0)
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@192.168.69.247:36106,127.0.0.1:36106/gydnpigj2ja2qr2srq4ikjwnl7xfgbra"
-        furl2 = "pb://ttwwooyunnyhzs7r6vdonnm2hpi52w6y@192.168.69.247:36111,127.0.0.1:36106/ttwwoogj2ja2qr2srq4ikjwnl7xfgbra"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@192.168.69.247:36106,127.0.0.1:36106,ipv6:[::1]:36106,ipv6:[2001:DB8::1]:36106/gydnpigj2ja2qr2srq4ikjwnl7xfgbra"
+        furl2 = "pb://ttwwooyunnyhzs7r6vdonnm2hpi52w6y@192.168.69.247:36111,127.0.0.1:36106,ipv6:[::1]:36106,ipv6:[2001:DB8::1]:36106/ttwwoogj2ja2qr2srq4ikjwnl7xfgbra"
         ann1 = (furl1, "storage", "RIStorage", "nick1", "ver23", "ver0")
         ann1b = (furl1, "storage", "RIStorage", "nick1", "ver24", "ver0")
         ann2 = (furl2, "storage", "RIStorage", "nick2", "ver30", "ver0")
@@ -90,7 +90,7 @@ class Introducer(ServiceMixin, unittest.TestCase, pollmixin.PollMixin):
         sk_s, vk_s = keyutil.make_keypair()
         sk, _ignored = keyutil.parse_privkey(sk_s)
         keyid = keyutil.remove_prefix(vk_s, "pub-v0-")
-        furl1 = "pb://onug64tu@127.0.0.1:123/short" # base32("short")
+        furl1 = "pb://onug64tu@127.0.0.1:123,ipv6:[::1]:123,ipv6:[::1]:123/short" # base32("short")
         ann_t = ic.create_announcement("storage", make_ann(furl1), sk)
         i.remote_publish_v2(ann_t, Referenceable())
         announcements = i.get_announcements()
@@ -100,7 +100,7 @@ class Introducer(ServiceMixin, unittest.TestCase, pollmixin.PollMixin):
         ann1_out = announcements[0].announcement
         self.failUnlessEqual(ann1_out["anonymous-storage-FURL"], furl1)
 
-        furl2 = "pb://%s@127.0.0.1:36106/swissnum" % keyid
+        furl2 = "pb://%s@127.0.0.1:36106,ipv6:[::1]:36106/swissnum" % keyid
         ann2 = (furl2, "storage", "RIStorage", "nick1", "ver23", "ver0")
         i.remote_publish(ann2)
         announcements = i.get_announcements()
@@ -133,7 +133,7 @@ class Client(unittest.TestCase):
         announcements = []
         ic.subscribe_to("storage",
                         lambda key_s,ann: announcements.append(ann))
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106/gydnpigj2ja2qr2srq4ikjwnl7xfgbra"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106,ipv6:[::1]:36106/gydnpigj2ja2qr2srq4ikjwnl7xfgbra"
         ann1 = (furl1, "storage", "RIStorage", "nick1", "ver23", "ver0")
         ann1b = (furl1, "storage", "RIStorage", "nick1", "ver24", "ver0")
         ca = WrapV2ClientInV1Interface(ic)
@@ -188,9 +188,9 @@ class Client(unittest.TestCase):
         def _received(key_s, ann):
             announcements.append( (key_s, ann) )
         ic1.subscribe_to("storage", _received)
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106/gydnp"
-        furl1a = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:7777/gydnp"
-        furl2 = "pb://ttwwooyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106/ttwwoo"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106,ipv6:[::1]:36106/gydnp"
+        furl1a = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:7777,ipv6:[::1]:7777/gydnp"
+        furl2 = "pb://ttwwooyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106,ipv6:[::1]:36106/ttwwoo"
 
         privkey_s, pubkey_vs = keyutil.make_keypair()
         privkey, _ignored = keyutil.parse_privkey(privkey_s)
@@ -293,8 +293,8 @@ class Client(unittest.TestCase):
         sk_s, vk_s = keyutil.make_keypair()
         sk, _ignored = keyutil.parse_privkey(sk_s)
         keyid = keyutil.remove_prefix(vk_s, "pub-v0-")
-        furl1 = "pb://onug64tu@127.0.0.1:123/short" # base32("short")
-        furl2 = "pb://%s@127.0.0.1:36106/swissnum" % keyid
+        furl1 = "pb://onug64tu@127.0.0.1:123,ipv6:[::1]:123/short" # base32("short")
+        furl2 = "pb://%s@127.0.0.1:36106,ipv6:[::1]:36106/swissnum" % keyid
         ann_t = ic.create_announcement("storage", make_ann(furl1), sk)
         ic.remote_announce_v2([ann_t])
         d = fireEventually()
@@ -325,7 +325,7 @@ class Server(unittest.TestCase):
         ic1 = IntroducerClient(None,
                                "introducer.furl", u"my_nickname",
                                "ver23", "oldest_version", {})
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106/gydnp"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:36106,ipv6:[::1]:36106/gydnp"
 
         privkey_s, _ = keyutil.make_keypair()
         privkey, _ = keyutil.parse_privkey(privkey_s)
@@ -416,7 +416,7 @@ class Queue(SystemTestMixin, unittest.TestCase):
         tub2.setServiceParent(self.parent)
         c = IntroducerClient(tub2, ifurl,
                              u"nickname", "version", "oldest", {})
-        furl1 = "pb://onug64tu@127.0.0.1:123/short" # base32("short")
+        furl1 = "pb://onug64tu@127.0.0.1:123,ipv6:[::1]:123/short" # base32("short")
         sk_s, vk_s = keyutil.make_keypair()
         sk, _ignored = keyutil.parse_privkey(sk_s)
 
@@ -808,7 +808,7 @@ class SystemTest(SystemTestMixin, unittest.TestCase):
     test_system_v1_server.timeout = 480
     # occasionally takes longer than 350s on "draco"
 
-class FakeRemoteReference:
+class FakeRemoteReferenceIPv4:
     def notifyOnDisconnect(self, *args, **kwargs): pass
     def getRemoteTubID(self): return "62ubehyunnyhzs7r6vdonnm2hpi52w6y"
     def getLocationHints(self): return [("ipv4", "here.example.com", "1234"),
@@ -816,8 +816,16 @@ class FakeRemoteReference:
     def getPeer(self): return address.IPv4Address("TCP", "remote.example.com",
                                                   3456)
 
+class FakeRemoteReferenceIPv6:
+    def notifyOnDisconnect(self, *args, **kwargs): pass
+    def getRemoteTubID(self): return "62ubehyunnyhzs7r6vdonnm2hpi52w6y"
+    def getLocationHints(self): return [("ipv6", "here.example.com", "1234"),
+                                        ("ipv6", "there.example.com", "2345")]
+    def getPeer(self): return address.IPv6Address("TCP", "remote.example.com",
+                                                  3456)
+
 class ClientInfo(unittest.TestCase):
-    def test_client_v2(self):
+    def test_client_v2_ipv4(self):
         introducer = IntroducerService()
         tub = introducer_furl = None
         app_versions = {"whizzy": "fizzy"}
@@ -826,7 +834,7 @@ class ClientInfo(unittest.TestCase):
         #furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
         #ann_s = make_ann_t(client_v2, furl1, None, 10)
         #introducer.remote_publish_v2(ann_s, Referenceable())
-        subscriber = FakeRemoteReference()
+        subscriber = FakeRemoteReferenceIPv4()
         introducer.remote_subscribe_v2(subscriber, "storage",
                                        client_v2._my_subscriber_info)
         subs = introducer.get_subscribers()
@@ -837,9 +845,9 @@ class ClientInfo(unittest.TestCase):
         self.failUnlessEqual(s0.nickname, NICKNAME % u"v2")
         self.failUnlessEqual(s0.version, "my_version")
 
-    def test_client_v1(self):
+    def test_client_v1_ipv4(self):
         introducer = IntroducerService()
-        subscriber = FakeRemoteReference()
+        subscriber = FakeRemoteReferenceIPv4()
         introducer.remote_subscribe(subscriber, "storage")
         # the v1 subscribe interface had no subscriber_info: that was usually
         # sent in a separate stub_client pseudo-announcement
@@ -850,7 +858,7 @@ class ClientInfo(unittest.TestCase):
         self.failUnlessEqual(s0.service_name, "storage")
 
         # now submit the stub_client announcement
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0,ipv6:[::1]:0/swissnum"
         ann = (furl1, "stub_client", "RIStubClient",
                (NICKNAME % u"v1").encode("utf-8"), "my_version", "oldest")
         introducer.remote_publish(ann)
@@ -866,7 +874,67 @@ class ClientInfo(unittest.TestCase):
 
         # a subscription that arrives after the stub_client announcement
         # should be correlated too
-        subscriber2 = FakeRemoteReference()
+        subscriber2 = FakeRemoteReferenceIPv4()
+        introducer.remote_subscribe(subscriber2, "thing2")
+
+        subs = introducer.get_subscribers()
+        self.failUnlessEqual(len(subs), 2)
+        s0 = [s for s in subs if s.service_name == "thing2"][0]
+        # v1 announcements do not contain app-versions
+        self.failUnlessEqual(s0.app_versions, {})
+        self.failUnlessEqual(s0.nickname, NICKNAME % u"v1")
+        self.failUnlessEqual(s0.version, "my_version")
+
+    def test_client_v2_ipv6(self):
+        introducer = IntroducerService()
+        tub = introducer_furl = None
+        app_versions = {"whizzy": "fizzy"}
+        client_v2 = IntroducerClient(tub, introducer_furl, NICKNAME % u"v2",
+                                     "my_version", "oldest", app_versions)
+        #furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
+        #ann_s = make_ann_t(client_v2, furl1, None, 10)
+        #introducer.remote_publish_v2(ann_s, Referenceable())
+        subscriber = FakeRemoteReferenceIPv6()
+        introducer.remote_subscribe_v2(subscriber, "storage",
+                                       client_v2._my_subscriber_info)
+        subs = introducer.get_subscribers()
+        self.failUnlessEqual(len(subs), 1)
+        s0 = subs[0]
+        self.failUnlessEqual(s0.service_name, "storage")
+        self.failUnlessEqual(s0.app_versions, app_versions)
+        self.failUnlessEqual(s0.nickname, NICKNAME % u"v2")
+        self.failUnlessEqual(s0.version, "my_version")
+
+    def test_client_v1_ipv6(self):
+        introducer = IntroducerService()
+        subscriber = FakeRemoteReferenceIPv6()
+        introducer.remote_subscribe(subscriber, "storage")
+        # the v1 subscribe interface had no subscriber_info: that was usually
+        # sent in a separate stub_client pseudo-announcement
+        subs = introducer.get_subscribers()
+        self.failUnlessEqual(len(subs), 1)
+        s0 = subs[0]
+        self.failUnlessEqual(s0.nickname, u"?") # not known yet
+        self.failUnlessEqual(s0.service_name, "storage")
+
+        # now submit the stub_client announcement
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0,ipv6:[::1]:0/swissnum"
+        ann = (furl1, "stub_client", "RIStubClient",
+               (NICKNAME % u"v1").encode("utf-8"), "my_version", "oldest")
+        introducer.remote_publish(ann)
+        # the server should correlate the two
+        subs = introducer.get_subscribers()
+        self.failUnlessEqual(len(subs), 1)
+        s0 = subs[0]
+        self.failUnlessEqual(s0.service_name, "storage")
+        # v1 announcements do not contain app-versions
+        self.failUnlessEqual(s0.app_versions, {})
+        self.failUnlessEqual(s0.nickname, NICKNAME % u"v1")
+        self.failUnlessEqual(s0.version, "my_version")
+
+        # a subscription that arrives after the stub_client announcement
+        # should be correlated too
+        subscriber2 = FakeRemoteReferenceIPv6()
         introducer.remote_subscribe(subscriber2, "thing2")
 
         subs = introducer.get_subscribers()
@@ -884,7 +952,7 @@ class Announcements(unittest.TestCase):
         app_versions = {"whizzy": "fizzy"}
         client_v2 = IntroducerClient(tub, introducer_furl, u"nick-v2",
                                      "my_version", "oldest", app_versions)
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0,ipv6:[::1]:0/swissnum"
         tubid = "62ubehyunnyhzs7r6vdonnm2hpi52w6y"
         ann_s0 = make_ann_t(client_v2, furl1, None, 10.0)
         canary0 = Referenceable()
@@ -905,7 +973,7 @@ class Announcements(unittest.TestCase):
         app_versions = {"whizzy": "fizzy"}
         client_v2 = IntroducerClient(tub, introducer_furl, u"nick-v2",
                                      "my_version", "oldest", app_versions)
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0,ipv6:[::1]:0/swissnum"
         sk_s, vk_s = keyutil.make_keypair()
         sk, _ignored = keyutil.parse_privkey(sk_s)
         pks = keyutil.remove_prefix(vk_s, "pub-")
@@ -925,7 +993,7 @@ class Announcements(unittest.TestCase):
     def test_client_v1(self):
         introducer = IntroducerService()
 
-        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0/swissnum"
+        furl1 = "pb://62ubehyunnyhzs7r6vdonnm2hpi52w6y@127.0.0.1:0,ipv6:[::1]:0/swissnum"
         tubid = "62ubehyunnyhzs7r6vdonnm2hpi52w6y"
         ann = (furl1, "storage", "RIStorage",
                u"nick-v1".encode("utf-8"), "my_version", "oldest")
@@ -993,7 +1061,7 @@ class DecodeFurl(unittest.TestCase):
     def test_decode(self):
         # make sure we have a working base64.b32decode. The one in
         # python2.4.[01] was broken.
-        furl = 'pb://t5g7egomnnktbpydbuijt6zgtmw4oqi5@127.0.0.1:51857/hfzv36i'
+        furl = 'pb://t5g7egomnnktbpydbuijt6zgtmw4oqi5@127.0.0.1:51857,ipv6:[::1]:51857/hfzv36i'
         m = re.match(r'pb://(\w+)@', furl)
         assert m
         nodeid = b32decode(m.group(1).upper())
