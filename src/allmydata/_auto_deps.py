@@ -27,8 +27,9 @@ install_requires = [
     #   includes the fix to https://twistedmatrix.com/trac/ticket/411
     # * The SFTP frontend depends on Twisted 11.0.0 to fix the SSH server
     #   rekeying bug http://twistedmatrix.com/trac/ticket/4395
+    # * IPv6 landed in 12.1.0, so you will need something higher than that.
     #
-    "Twisted >= 11.0.0",
+    "Twisted >= 12.1.0",
 
     # * foolscap < 0.5.1 had a performance bug which spent O(N**2) CPU for
     #   transferring large mutable files of size N.
@@ -45,8 +46,10 @@ install_requires = [
     #   pyOpenSSL, such as foolscap requiring a specific version of
     #   pyOpenSSL, or foolscap switching from pyOpenSSL to a different crypto
     #   library, we need to update this declaration here.
+    # * IPv6 is not included yet in foolscap 0.6.4, so it will surely need 
+    #   greater than 0.6.4
     #
-    "foolscap >= 0.6.3",
+    "foolscap > 0.6.4",
     "pyOpenSSL",
 
     "Nevow >= 0.6.0",
