@@ -49,7 +49,7 @@ install_requires = [
     # * IPv6 is not included yet in foolscap 0.6.4, so it will surely need 
     #   greater than 0.6.4
     #
-    "foolscap > 0.6.4",
+    "foolscap >= 0.6.5",
     "pyOpenSSL",
 
     "Nevow >= 0.6.0",

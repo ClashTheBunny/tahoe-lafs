@@ -68,7 +68,7 @@ except ImportError:
     increase_rlimits = _increase_rlimits
 
 
-def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
+def get_local_addresses_async(target='A.ROOT-SERVERS.NET'):
     """
     Return a Deferred that fires with a list of IPv4 addresses (as dotted-quad
     strings) that are currently configured on this host, sorted in descending
@@ -80,7 +80,7 @@ def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
         reachable to.
     """
     addresses = []
-    local_ips = get_local_ip_for(target)
+    local_ips = get_local_ips_for(target)
     if local_ips:
         addresses.extend(local_ips)
 
@@ -98,7 +98,7 @@ def get_local_addresses_async(target="198.41.0.4"): # A.ROOT-SERVERS.NET
 
     return d
 
-def get_local_ip_for(target):
+def get_local_ips_for(target):
     """Find out what our IP address is for use by a given target.
 
     @return: the IP address as a dotted-quad string which could be used by
@@ -327,7 +327,7 @@ def _cygwin_hack_find_addresses(target):
     addresses = []
     for h in [target, "localhost", "127.0.0.1",]:
         try:
-            addrs = get_local_ip_for(h)
+            addrs = get_local_ips_for(h)
             for addr in addrs:
                 if addr not in addresses:
                     addresses.append(addr)

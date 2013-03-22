@@ -167,8 +167,8 @@ Persistent Routes:
 }
 
 class ListAddresses(testutil.SignalMixin, unittest.TestCase):
-    def test_get_local_ip_for(self):
-        addr = iputil.get_local_ip_for('127.0.0.1')
+    def test_get_local_ips_for(self):
+        addr = iputil.get_local_ips_for('127.0.0.1')
         self.failUnless(DOTTED_QUAD_RE.match(addr[0]))
 
     def test_list_async(self):
