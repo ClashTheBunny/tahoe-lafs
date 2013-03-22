@@ -124,9 +124,9 @@ def get_local_ips_for(target):
         # faster.
         return []
     udpprot = DatagramProtocol()
-    port = reactor.listenUDP(0, udpprot)
     localips = []
     for target_ipaddr in target_ipaddrs:
+        port = reactor.listenUDP(0, udpprot)
         if target_ipaddr in localips: continue
         try:
             udpprot.transport.connect(target_ipaddr, 7)
