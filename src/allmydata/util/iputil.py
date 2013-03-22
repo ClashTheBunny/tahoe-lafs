@@ -108,7 +108,10 @@ def get_local_ips_for(target):
     """
 
     try:
-        target_ipaddrs = set([ addr[4][0] for addr in socket.getaddrinfo(target, None) ])
+        # until http://twistedmatrix.com/trac/ticket/5086 is fixed, filter out only IPv4 addresses
+        #target_ipaddrs = set([ addr[4][0] for addr in socket.getaddrinfo(target, None) ]) # all addresses, IPv8 or IPX anyone?
+        #target_ipaddrs = set([ addr[4][0] for addr in socket.getaddrinfo(target, None) if (addr[0] == 2) or (addr[0] == 10) ])  # IPv4 and IPv6 addresses
+        target_ipaddrs = set([ addr[4][0] for addr in socket.getaddrinfo(target, None) if addr[0] == 2 ])  # IPv4 only
     except socket.gaierror:
         # DNS isn't running, or somehow we encountered an error
 
@@ -127,7 +130,6 @@ def get_local_ips_for(target):
     localips = []
     for target_ipaddr in target_ipaddrs:
         port = reactor.listenUDP(0, udpprot)
-        if target_ipaddr in localips: continue
         try:
             udpprot.transport.connect(target_ipaddr, 7)
             localip = udpprot.transport.getHost().host
